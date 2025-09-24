@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 
 import Login from './pages/dashboard/admin/login';
+import Dashboard from './pages/dashboard/dashboard';
 
 //sample
 function Home() {
@@ -26,8 +27,9 @@ function App() {
         {/* Route for the Home page */}
         <Route path="/" element={<Home />} />
         
-        {/* Route for the dashboard modules */}
+        {/* Routes for the dashboard modules */}
         <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </>
     )
   );
