@@ -369,7 +369,14 @@ export default function Dashboard() {
             <CourseModal isOpen={modalState.type === 'add' || modalState.type === 'rename'} onClose={() => setModalState({ type: null, data: null })} onSubmit={handleSaveCourse} initialValue={modalState.type === 'rename' ? modalState.data.name.replace(' FAQ', '') : ''} title={modalState.type === 'add' ? 'Add New Course' : 'Rename Course'} />
             <ConfirmModal isOpen={modalState.type === 'delete-course'} onClose={() => setModalState({ type: null, data: null })} onConfirm={handleConfirmDeleteCourse} title="Delete Course" message={`Delete "${modalState.data?.name}"? This will also remove all associated FAQs.`} />
             <ConfirmModal isOpen={modalState.type === 'delete-blog'} onClose={() => setModalState({ type: null, data: null })} onConfirm={handleConfirmDeleteBlog} title="Delete Blog Post" message={`Are you sure you want to delete "${modalState.data?.title}"?`} />
-             <ConfirmModal isOpen={modalState.type === 'delete-faq'} onClose={() => setModalState({ type: null, data: null })} onConfirm={() => {handleDeleteFaq(modalState.data.id); setModalState({ type: null, data: null });}} title="Delete FAQ" message={`Are you sure you want to delete this FAQ?`} />
+             <ConfirmModal
+                isOpen={modalState.type === 'delete-faq'}
+                onClose={() => setModalState({ type: null, data: null })}
+                onConfirm={handleConfirmDeleteFaq}
+                title="Delete FAQ"
+                message={`Are you sure you want to delete this FAQ?`}
+                />
+
             {viewState.type === 'preview-blog' && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" onClick={() => setViewState({ type: 'list', data: null })}>
                     <div onClick={(e) => e.stopPropagation()} className="w-full max-w-4xl max-h-full overflow-y-auto"><BlogPreview title={viewState.data.title} content={viewState.data.content} /></div>
