@@ -26,12 +26,12 @@ const initialDataStore = {
 };
 
 // --- REUSABLE MODAL COMPONENTS ---
-const CourseModal = ({ isOpen, onClose, onSubmit, initialValue = '', title }) => {
+const CategoryModal = ({ isOpen, onClose, onSubmit, initialValue = '', title, placeholder, label }) => {
     const [name, setName] = useState(initialValue);
     useEffect(() => { setName(initialValue); }, [initialValue, isOpen]);
     if (!isOpen) return null;
     const handleSubmit = (e) => { e.preventDefault(); if (name.trim()) { onSubmit(name.trim()); onClose(); } };
-    return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"> <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"> <div className="flex justify-between items-center mb-4"> <h2 className="text-xl font-bold text-gray-800">{title}</h2> <button onClick={onClose} className="text-gray-500 hover:text-gray-800"><CloseIcon /></button> </div> <form onSubmit={handleSubmit}> <label htmlFor="courseName" className="block text-gray-700 font-medium mb-2 text-sm">Course Name</label> <input id="courseName" type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="e.g., Pearson Test of English" required autoFocus /> <div className="flex justify-end gap-4 mt-6"> <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-gray-600 bg-gray-100 hover:bg-gray-200 font-semibold">Cancel</button> <button type="submit" className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 font-semibold">Save</button> </div> </form> </div> </div> );
+    return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"> <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"> <div className="flex justify-between items-center mb-4"> <h2 className="text-xl font-bold text-gray-800">{title}</h2> <button onClick={onClose} className="text-gray-500 hover:text-gray-800"><CloseIcon /></button> </div> <form onSubmit={handleSubmit}> <label htmlFor="categoryName" className="block text-gray-700 font-medium mb-2 text-sm">{label}</label> <input id="categoryName" type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder={placeholder} required autoFocus /> <div className="flex justify-end gap-4 mt-6"> <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-gray-600 bg-gray-100 hover:bg-gray-200 font-semibold">Cancel</button> <button type="submit" className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 font-semibold">Save</button> </div> </form> </div> </div> );
 };
 
 const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
@@ -204,10 +204,23 @@ const GenericContentView = ({ title, data, columns, newItemLabel, moduleType, on
     );
 };
 
-const Sidebar = ({ navItems, selectedModule, setSelectedModule, openMenu, setOpenMenu, onAddNewCourse, onRenameCourse, onDeleteCourse }) => {
+const Sidebar = ({ navItems, selectedModule, setSelectedModule, openMenus, setOpenMenus, onAddNewCategory, onRenameCategory, onDeleteCategory }) => {
     const [activeKebabMenu, setActiveKebabMenu] = useState(null);
     useEffect(() => { const handleClickOutside = () => { if (activeKebabMenu) setActiveKebabMenu(null); }; document.addEventListener('click', handleClickOutside); return () => document.removeEventListener('click', handleClickOutside); }, [activeKebabMenu]);
-    const KebabMenu = ({ course }) => ( <div className="relative ml-auto"> <button onClick={(e) => { e.stopPropagation(); setActiveKebabMenu(activeKebabMenu === course.id ? null : course.id); }} className="p-1 rounded-full hover:bg-gray-200" title="More options"><KebabMenuIcon /></button> {activeKebabMenu === course.id && ( <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg border z-20"> <a href="#" onClick={(e) => { e.preventDefault(); onRenameCourse(course); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Rename</a> <a href="#" onClick={(e) => { e.preventDefault(); onDeleteCourse(course); }} className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</a> </div> )} </div> );
+    const toggleMenu = (id) => setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
+
+    const KebabMenu = ({ categoryType, item }) => (
+        <div className="relative ml-auto">
+            <button onClick={(e) => { e.stopPropagation(); setActiveKebabMenu(activeKebabMenu === item.id ? null : item.id); }} className="p-1 rounded-full hover:bg-gray-200" title="More options"><KebabMenuIcon /></button>
+            {activeKebabMenu === item.id && (
+                <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg border z-20">
+                    <a href="#" onClick={(e) => { e.preventDefault(); onRenameCategory(categoryType, item); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Rename</a>
+                    <a href="#" onClick={(e) => { e.preventDefault(); onDeleteCategory(categoryType, item); }} className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</a>
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <aside className="w-64 bg-white text-gray-800 flex flex-col p-4 border-r border-gray-200">
             <div className="flex items-center gap-3 px-2 mb-8 h-10"><img src={Logo} alt="Company Logo" className="h-full object-contain" /></div>
@@ -216,16 +229,47 @@ const Sidebar = ({ navItems, selectedModule, setSelectedModule, openMenu, setOpe
                 <ul>
                     {navItems.map(item => (
                         <li key={item.id}>
-                            <div onClick={() => { if (item.subItems) { const isOpening = openMenu !== item.id; setOpenMenu(isOpening ? item.id : null); if (isOpening) { const firstSubItem = item.subItems.find(sub => !sub.id.endsWith('_add_new')); if (firstSubItem) setSelectedModule(firstSubItem.id); } } else { setSelectedModule(item.id); setOpenMenu(null); } }} className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg transition-colors duration-200 cursor-pointer ${(selectedModule.startsWith(item.id) || openMenu === item.id) ? 'bg-red-100 text-red-600 font-semibold' : 'hover:bg-gray-100'}`}>
+                            <div 
+                                onClick={() => {
+                                    setSelectedModule(item.id);
+                                    if (item.subItems) {
+                                        toggleMenu(item.id);
+                                    } else {
+                                        setOpenMenus({});
+                                    }
+                                }} 
+                                className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg transition-colors duration-200 cursor-pointer ${(selectedModule.startsWith(item.id) || openMenus[item.id]) ? 'bg-red-100 text-red-600 font-semibold' : 'hover:bg-gray-100'}`}
+                            >
                                 <div className="flex items-center gap-3">{item.icon}<span>{item.name}</span></div>
-                                {item.subItems && <ChevronDownIcon isOpen={openMenu === item.id} />}
+                                {item.subItems && <ChevronDownIcon isOpen={openMenus[item.id]} />}
                             </div>
-                            {item.subItems && openMenu === item.id && (
-                                <ul className="pl-6 pt-1 pb-1">
-                                    {item.subItems.map(subItem => {
-                                        const isAddButton = subItem.id.endsWith('_add_new');
-                                        return ( <li key={subItem.id} className="flex items-center group"> <a href="#" onClick={(e) => { e.preventDefault(); if (isAddButton) { onAddNewCourse(); } else { setSelectedModule(subItem.id); }}} className={`flex-grow flex items-center gap-3 text-sm py-2 px-4 rounded-md transition-colors w-full ${selectedModule === subItem.id ? 'text-red-600 font-semibold' : 'hover:bg-gray-100'}`}> {subItem.icon && <span className="text-gray-500">{subItem.icon}</span>} <span>{subItem.name}</span> </a> {item.id === 'faq' && !isAddButton && (<div className="opacity-0 group-hover:opacity-100 transition-opacity"><KebabMenu course={subItem} /></div>)} </li> )
-                                    })}
+                            {item.subItems && openMenus[item.id] && (
+                                <ul className="pl-4 pt-1 pb-1">
+                                    {item.subItems.map(subItem => (
+                                        <li key={subItem.id}>
+                                            <div onClick={() => { subItem.children ? toggleMenu(subItem.id) : setSelectedModule(subItem.id); }} className={`flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-lg transition-colors duration-200 cursor-pointer ${ (selectedModule.startsWith(subItem.id) || openMenus[subItem.id]) ? 'text-red-600 font-semibold' : 'hover:bg-gray-100'}`}>
+                                                <span>{subItem.name}</span>
+                                                {subItem.children && <ChevronDownIcon isOpen={openMenus[subItem.id]} />}
+                                            </div>
+                                            {subItem.children && openMenus[subItem.id] && (
+                                                 <ul className="pl-4 pt-1 pb-1">
+                                                    {subItem.children.map(childItem => {
+                                                        const isAddButton = childItem.id.endsWith('_add_new');
+                                                        const categoryType = subItem.id.split('_')[1]; // 'course' or 'country'
+                                                        return (
+                                                            <li key={childItem.id} className="flex items-center group">
+                                                                <a href="#" onClick={(e) => { e.preventDefault(); isAddButton ? onAddNewCategory(categoryType) : setSelectedModule(childItem.id); }} className={`flex-grow flex items-center gap-3 text-sm py-2 px-4 rounded-md transition-colors w-full ${selectedModule === childItem.id ? 'text-red-600 font-semibold' : 'hover:bg-gray-100'}`}>
+                                                                    {childItem.icon && <span className="text-gray-500">{childItem.icon}</span>}
+                                                                    <span>{childItem.name}</span>
+                                                                </a>
+                                                                {!isAddButton && (<div className="opacity-0 group-hover:opacity-100 transition-opacity"><KebabMenu categoryType={categoryType} item={childItem} /></div>)}
+                                                            </li>
+                                                        )
+                                                    })}
+                                                </ul>
+                                            )}
+                                        </li>
+                                    ))}
                                 </ul>
                             )}
                         </li>
@@ -239,7 +283,41 @@ const Sidebar = ({ navItems, selectedModule, setSelectedModule, openMenu, setOpe
 
 // --- INITIAL CONFIGURATION ---
 const initialModules = {
-    faq: { name: 'FAQ', icon: <FaqIcon />, title: 'All FAQs', newItemLabel: null, columns: [{ key: 'question', header: 'Question' }, { key: 'category', header: 'Category' }, { key: 'status', header: 'Status' }], subItems: [ { id: 'faq_ielts', name: 'IELTS FAQ' }, { id: 'faq_toefl', name: 'TOEFL FAQ' }, { id: 'faq_duolingo', name: 'Duolingo FAQ' }, { id: 'faq_pte', name: 'PTE FAQ' }, { id: 'faq_sat', name: 'SAT FAQ' }, { id: 'faq_gre', name: 'GRE FAQ' }, { id: 'faq_gmat', name: 'GMAT FAQ' }, { id: 'faq_english', name: 'English FAQ' }, { id: 'faq_german', name: 'German FAQ' }, { id: 'faq_french', name: 'French FAQ' }, { id: 'faq_add_new', name: 'Add New Course', icon: <AddIcon/> }, ] },
+    faq: { 
+        name: 'FAQ', 
+        icon: <FaqIcon />, 
+        title: 'All FAQs', 
+        newItemLabel: null, 
+        columns: [{ key: 'question', header: 'Question' }, { key: 'category', header: 'Category' }, { key: 'status', header: 'Status' }], 
+        subItems: [
+            { id: 'faq_course', name: 'Course FAQ', children: [
+                { id: 'faq_course_ielts', name: 'IELTS' }, 
+                { id: 'faq_course_toefl', name: 'TOEFL' }, 
+                { id: 'faq_course_duolingo', name: 'Duolingo' }, 
+                { id: 'faq_course_pte', name: 'PTE' }, 
+                { id: 'faq_course_sat', name: 'SAT' }, 
+                { id: 'faq_course_gre', name: 'GRE' }, 
+                { id: 'faq_course_gmat', name: 'GMAT' }, 
+                { id: 'faq_course_english', name: 'English' }, 
+                { id: 'faq_course_german', name: 'German' }, 
+                { id: 'faq_course_french', name: 'French' }, 
+                { id: 'faq_course_add_new', name: 'Add New Course', icon: <AddIcon/> },
+            ]},
+            { id: 'faq_country', name: 'Country FAQ', children: [
+                { id: 'faq_country_usa', name: 'USA' },
+                { id: 'faq_country_uk', name: 'UK' },
+                { id: 'faq_country_canada', name: 'Canada' },
+                { id: 'faq_country_australia', name: 'Australia' },
+                { id: 'faq_country_new_zealand', name: 'New Zealand' },
+                { id: 'faq_country_dubai', name: 'Dubai' },
+                { id: 'faq_country_germany', name: 'Germany' },
+                { id: 'faq_country_ireland', name: 'Ireland' },
+                { id: 'faq_country_france', name: 'France' },
+                { id: 'faq_country_malta', name: 'Malta' },
+                { id: 'faq_country_add_new', name: 'Add New Country', icon: <AddIcon/> }
+            ]}
+        ]
+    },
     blogs: { name: 'Blogs', icon: <BlogIcon />, title: 'All Blogs', newItemLabel: 'New Blog Post', columns: [{ key: 'title', header: 'Title' }, { key: 'author', header: 'Author' }, { key: 'date', header: 'Date' }, { key: 'status', header: 'Status' }], subItems: [{ id: 'blogs_write', name: 'Write new blog' },{ id: 'blogs_drafts', name: 'Drafts' },{ id: 'blogs_published', name: 'Published' }] },
     events: { name: 'Events', icon: <EventsIcon />, title: 'Events', newItemLabel: 'New Event', columns: [{ key: 'name', header: 'Event Name' }, { key: 'date', header: 'Date' }, { key: 'location', header: 'Location' }, { key: 'status', header: 'Status' }] },
     webinar: { name: 'Webinar', icon: <WebinarIcon />, title: 'Webinars', newItemLabel: 'New Webinar', columns: [{ key: 'title', header: 'Title' }, { key: 'speaker', header: 'Speaker' }, { key: 'date', header: 'Date' }, { key: 'status', header: 'Status' }] },
@@ -253,41 +331,87 @@ export default function Dashboard() {
     const [modules, setModules] = useState(initialModules);
     const [dataStore, setDataStore] = useState(initialDataStore);
     const [selectedModule, setSelectedModule] = useState('faq');
-    const [openMenu, setOpenMenu] = useState(null);
+    const [openMenus, setOpenMenus] = useState({});
     const [modalState, setModalState] = useState({ type: null, data: null });
     const [viewState, setViewState] = useState({ type: 'list', data: null });
 
-    const handleAddNewCourse = () => setModalState({ type: 'add', data: null });
-    const handleRenameCourse = (course) => setModalState({ type: 'rename', data: course });
-    const handleDeleteCourse = (course) => setModalState({ type: 'delete-course', data: course });
-    const handleSaveCourse = (newName) => {
+    const handleAddNewCategory = (categoryType) => setModalState({ type: 'add', data: { categoryType } });
+    const handleRenameCategory = (categoryType, item) => setModalState({ type: 'rename', data: { ...item, categoryType } });
+    const handleDeleteCategory = (categoryType, item) => setModalState({ type: 'delete-category', data: { ...item, categoryType } });
+
+    const handleSaveCategory = (newName) => {
+        const { categoryType } = modalState.data;
+        const parentId = `faq_${categoryType}`;
+
         setModules(prevModules => {
-            const newFaq = { ...prevModules.faq };
-            const newSubItems = [...newFaq.subItems];
+            const parentCategoryIndex = prevModules.faq.subItems.findIndex(item => item.id === parentId);
+            if (parentCategoryIndex === -1) return prevModules;
+
+            let newChildren;
+
             if (modalState.type === 'add') {
                 const slug = newName.toLowerCase().replace(/\s+/g, '_');
-                const newCourse = { id: `faq_${slug}`, name: `${newName} FAQ` };
-                newSubItems.splice(newSubItems.length - 1, 0, newCourse);
+                const newCategory = { id: `faq_${categoryType}_${slug}`, name: newName };
+                const originalChildren = prevModules.faq.subItems[parentCategoryIndex].children;
+                newChildren = [
+                    ...originalChildren.slice(0, originalChildren.length - 1),
+                    newCategory,
+                    originalChildren[originalChildren.length - 1]
+                ];
             } else if (modalState.type === 'rename') {
-                const courseIndex = newSubItems.findIndex(item => item.id === modalState.data.id);
-                if (courseIndex > -1) newSubItems[courseIndex] = { ...newSubItems[courseIndex], name: `${newName} FAQ` };
+                newChildren = prevModules.faq.subItems[parentCategoryIndex].children.map(child => 
+                    child.id === modalState.data.id ? { ...child, name: newName } : child
+                );
+            } else {
+                return prevModules;
             }
-            newFaq.subItems = newSubItems;
-            return { ...prevModules, faq: newFaq };
+
+            const updatedParentCategory = {
+                ...prevModules.faq.subItems[parentCategoryIndex],
+                children: newChildren
+            };
+
+            const newSubItems = prevModules.faq.subItems.map((item, index) =>
+                index === parentCategoryIndex ? updatedParentCategory : item
+            );
+
+            const newFaqModule = { ...prevModules.faq, subItems: newSubItems };
+
+            return { ...prevModules, faq: newFaqModule };
         });
+
         setModalState({ type: null, data: null });
     };
 
-    const handleConfirmDeleteCourse = () => {
-        const courseToDelete = modalState.data;
+    const handleConfirmDeleteCategory = () => {
+        const { categoryType, id: categoryIdToDelete, name: categoryNameToDelete } = modalState.data;
+        const parentId = `faq_${categoryType}`;
+
         setModules(prevModules => {
-            const newFaq = { ...prevModules.faq };
-            newFaq.subItems = newFaq.subItems.filter(item => item.id !== courseToDelete.id);
-            return { ...prevModules, faq: newFaq };
+            const parentCategoryIndex = prevModules.faq.subItems.findIndex(item => item.id === parentId);
+            if (parentCategoryIndex === -1) return prevModules;
+
+            const newChildren = prevModules.faq.subItems[parentCategoryIndex].children.filter(
+                item => item.id !== categoryIdToDelete
+            );
+
+            const updatedParentCategory = {
+                ...prevModules.faq.subItems[parentCategoryIndex],
+                children: newChildren
+            };
+            
+            const newSubItems = prevModules.faq.subItems.map((item, index) => 
+                index === parentCategoryIndex ? updatedParentCategory : item
+            );
+
+            const newFaqModule = { ...prevModules.faq, subItems: newSubItems };
+
+            return { ...prevModules, faq: newFaqModule };
         });
-        setDataStore(prevData => ({ ...prevData, faq: prevData.faq.filter(item => item.category.toUpperCase() !== courseToDelete.name.replace(' FAQ', '').toUpperCase()) }));
+
+        setDataStore(prevData => ({ ...prevData, faq: prevData.faq.filter(item => item.category !== categoryNameToDelete) }));
         setModalState({ type: null, data: null });
-        if (selectedModule === courseToDelete.id) setSelectedModule('faq');
+        if (selectedModule === categoryIdToDelete) setSelectedModule('faq');
     };
 
     const handleAddFaq = (newFaqData) => { setDataStore(prevData => ({ ...prevData, faq: [...prevData.faq, { ...newFaqData, id: Date.now() }] })); };
@@ -300,25 +424,15 @@ export default function Dashboard() {
 
     const handleEditFaq = (faq) => {
         const categorySlug = faq.category.toLowerCase().replace(/\s+/g, '_');
-        setSelectedModule(`faq_${categorySlug}`);
-        setOpenMenu('faq');
-        setViewState({ type: 'edit-faq', data: faq });
-    };
-
-    useEffect(() => {
-        if (viewState.type === 'edit-faq' && selectedModule.startsWith('faq_')) {
-            const timeoutId = setTimeout(() => {
-                const faqManager = document.querySelector('.faq-manager-container'); // You'd need to add this class
-                if (faqManager) {
-                    const managerInstance = faqManager.__reactInternalInstance$.return.stateNode;
-                    managerInstance.handleEditClick(viewState.data);
-                }
-                setViewState({ type: 'list', data: null }); 
-            }, 10);
-            return () => clearTimeout(timeoutId);
+        const parentCategory = modules.faq.subItems.find(sub => sub.children.some(child => child.name === faq.category));
+        
+        if(parentCategory){
+            const categoryType = parentCategory.id.split('_')[1];
+            setSelectedModule(`faq_${categoryType}_${categorySlug}`);
+            setOpenMenus(prev => ({...prev, faq: true, [parentCategory.id]: true}));
         }
-    }, [viewState, selectedModule]);
-
+    };
+    
     const handleWriteNewBlog = () => setViewState({ type: 'edit-blog', data: null });
     const handleEditBlog = (blog) => setViewState({ type: 'edit-blog', data: blog });
     const handlePreviewBlog = (blog) => setViewState({ type: 'preview-blog', data: blog });
@@ -340,14 +454,16 @@ export default function Dashboard() {
         if (viewState.type === 'edit-blog') { return <BlogWriter initialBlog={viewState.data} onSave={handleSaveBlog} onCancel={() => setViewState({ type: 'list', data: null })} />; }
         if (selectedModule === 'blogs_write') { return <BlogWriter initialBlog={null} onSave={handleSaveBlog} onCancel={() => setSelectedModule('blogs_published')} />; }
 
-        const [mainModuleId, ...subModuleParts] = selectedModule.split('_');
-        const subModuleId = subModuleParts.join('_');
+        const [mainModuleId, categoryType, ...slugParts] = selectedModule.split('_');
+        const subModuleId = slugParts.join('_');
+        
         if (!modules[mainModuleId]) { return <GenericContentView title="Not Found" data={[]} columns={[]} newItemLabel="" />; }
         const mainModule = modules[mainModuleId];
 
-        if (mainModuleId === 'faq' && subModuleId) {
-            const subItemConfig = mainModule.subItems.find(item => item.id === selectedModule);
-            const categoryName = subItemConfig ? subItemConfig.name.replace(' FAQ', '') : 'New Course';
+        if (mainModuleId === 'faq' && categoryType && subModuleId) {
+            const parentCategory = mainModule.subItems.find(item => item.id === `faq_${categoryType}`);
+            const categoryConfig = parentCategory?.children.find(item => item.id === selectedModule);
+            const categoryName = categoryConfig ? categoryConfig.name : 'Not Found';
             const categoryFaqs = dataStore.faq.filter(f => f.category === categoryName);
             return <FAQManager categoryName={categoryName} faqs={categoryFaqs} onAdd={handleAddFaq} onUpdate={handleUpdateFaq} onDelete={(id) => handleDeleteFaq(dataStore.faq.find(f => f.id === id))} />;
         }
@@ -355,8 +471,9 @@ export default function Dashboard() {
         let data = dataStore[mainModuleId] || [];
         let title = mainModule.title;
         if (mainModuleId === 'blogs') {
-             if (subModuleId === 'drafts') { data = dataStore.blogs.filter(item => item.status === 'Draft'); title = 'Draft Blogs'; } 
-             else if (subModuleId === 'published') { data = dataStore.blogs.filter(item => item.status === 'Published'); title = 'Published Blogs'; }
+            const blogSubModule = selectedModule.split('_')[1];
+            if (blogSubModule === 'drafts') { data = dataStore.blogs.filter(item => item.status === 'Draft'); title = 'Draft Blogs'; } 
+            else if (blogSubModule === 'published') { data = dataStore.blogs.filter(item => item.status === 'Published'); title = 'Published Blogs'; }
         } else if (mainModuleId === 'faq') {
             data = dataStore.faq;
         }
@@ -364,25 +481,54 @@ export default function Dashboard() {
         return <GenericContentView title={title} data={data} columns={mainModule.columns} newItemLabel={mainModule.newItemLabel} moduleType={mainModuleId} onAddNew={mainModuleId === 'blogs' ? handleWriteNewBlog : null} onDelete={mainModuleId === 'faq' ? handleDeleteFaq : handleDeleteBlog} onEdit={mainModuleId === 'faq' ? handleEditFaq : handleEditBlog} onPreview={handlePreviewBlog} />;
     };
 
+    // Modal Details based on state
+    const modalInfo = {
+        add: { title: `Add New ${modalState.data?.categoryType === 'course' ? 'Course' : 'Country'}`, label: `${modalState.data?.categoryType === 'course' ? 'Course' : 'Country'} Name`, placeholder: `e.g., ${modalState.data?.categoryType === 'course' ? 'Pearson Test of English' : 'Japan'}` },
+        rename: { title: `Rename ${modalState.data?.categoryType === 'course' ? 'Course' : 'Country'}`, label: `${modalState.data?.categoryType === 'course' ? 'Course' : 'Country'} Name`, placeholder: '' },
+    };
+
     return (
         <div className="bg-gray-100 font-sans flex h-screen">
-            <CourseModal isOpen={modalState.type === 'add' || modalState.type === 'rename'} onClose={() => setModalState({ type: null, data: null })} onSubmit={handleSaveCourse} initialValue={modalState.type === 'rename' ? modalState.data.name.replace(' FAQ', '') : ''} title={modalState.type === 'add' ? 'Add New Course' : 'Rename Course'} />
-            <ConfirmModal isOpen={modalState.type === 'delete-course'} onClose={() => setModalState({ type: null, data: null })} onConfirm={handleConfirmDeleteCourse} title="Delete Course" message={`Delete "${modalState.data?.name}"? This will also remove all associated FAQs.`} />
+            <CategoryModal 
+                isOpen={modalState.type === 'add' || modalState.type === 'rename'}
+                onClose={() => setModalState({ type: null, data: null })}
+                onSubmit={handleSaveCategory}
+                initialValue={modalState.type === 'rename' ? modalState.data.name : ''}
+                title={modalInfo[modalState.type]?.title}
+                label={modalInfo[modalState.type]?.label}
+                placeholder={modalInfo[modalState.type]?.placeholder}
+            />
+            <ConfirmModal 
+                isOpen={modalState.type === 'delete-category'}
+                onClose={() => setModalState({ type: null, data: null })}
+                onConfirm={handleConfirmDeleteCategory}
+                title={`Delete ${modalState.data?.categoryType === 'course' ? 'Course' : 'Country'}`}
+                message={`Delete "${modalState.data?.name}"? This will also remove all associated FAQs.`}
+            />
             <ConfirmModal isOpen={modalState.type === 'delete-blog'} onClose={() => setModalState({ type: null, data: null })} onConfirm={handleConfirmDeleteBlog} title="Delete Blog Post" message={`Are you sure you want to delete "${modalState.data?.title}"?`} />
-             <ConfirmModal
+            <ConfirmModal
                 isOpen={modalState.type === 'delete-faq'}
                 onClose={() => setModalState({ type: null, data: null })}
                 onConfirm={handleConfirmDeleteFaq}
                 title="Delete FAQ"
                 message={`Are you sure you want to delete this FAQ?`}
-                />
+            />
 
             {viewState.type === 'preview-blog' && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" onClick={() => setViewState({ type: 'list', data: null })}>
                     <div onClick={(e) => e.stopPropagation()} className="w-full max-w-4xl max-h-full overflow-y-auto"><BlogPreview title={viewState.data.title} content={viewState.data.content} /></div>
                 </div>
             )}
-            <Sidebar navItems={navItems} selectedModule={selectedModule} setSelectedModule={setSelectedModule} openMenu={openMenu} setOpenMenu={setOpenMenu} onAddNewCourse={handleAddNewCourse} onRenameCourse={handleRenameCourse} onDeleteCourse={handleDeleteCourse} />
+            <Sidebar 
+                navItems={navItems} 
+                selectedModule={selectedModule} 
+                setSelectedModule={setSelectedModule} 
+                openMenus={openMenus} 
+                setOpenMenus={setOpenMenus} 
+                onAddNewCategory={handleAddNewCategory} 
+                onRenameCategory={handleRenameCategory} 
+                onDeleteCategory={handleDeleteCategory} 
+            />
             <main className="flex-1 flex flex-col overflow-y-auto">{renderContent()}</main>
         </div>
     );
